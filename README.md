@@ -1,54 +1,72 @@
-# React + TypeScript + Vite
+# 画像特徴量みえる君
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+- 画像特徴量可視化アプリケーション。
+- Canvas上で描画すると、Rust + WebAssemblyで特徴量を計算してグラフ表示します。
 
-Currently, two official plugins are available:
+## 主な機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 640×480のCanvas上でマウス描画
+- Rust + WebAssemblyによる特徴量計算
+- Plotly.jsによる棒グラフ表示
 
-## Expanding the ESLint configuration
+## デモ
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+[GitHub Pages でアプリケーションを試す](https://rebonire.github.io/image-features-viewer/)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## 技術スタック
+
+- **フロントエンド**: React 19.1.0 + TypeScript
+- **ビルドツール**: Vite 6.3.5
+- **可視化**: React Plotly.js
+- **高速計算**: Rust + WebAssembly (wasm-pack)
+
+## セットアップ
+
+### 前提条件
+
+- Node.js 20+
+- Rust (最新安定版)
+- wasm-pack
+
+### インストール
+
+```bash
+# 依存関係をインストール
+npm install
+
+# wasm-packをインストール（未インストールの場合）
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 開発環境の起動
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# WASMをビルド
+npm run build:wasm
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+# 起動
+npm run dev
+```
+
+## ビルド
+
+```bash
+# 本番用ビルド（WASM + React）
+npm run build
+
+# ローカルでプレビュー
+npm run preview
+```
+
+## 開発コマンド
+
+```bash
+npm run dev                 # 起動
+npm run build:wasm          # WASMビルド
+npm run build               # 全体ビルド
+npm run preview             # ビルド版プレビュー
+
+npm run lint                # ESLint実行
+npm run format              # Prettier実行
+npm run format:check        # フォーマットチェック
 ```
