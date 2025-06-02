@@ -10,11 +10,13 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
   features = [], 
   isLoading = false 
 }) => {
-  // ダミーデータ（特徴量が空の場合）- 100次元に対応
-  const defaultFeatures = new Array(100).fill(0)
+  // ダミーデータ
+  const defaultFeatures = new Array(25).fill(0)
   const displayFeatures = features.length > 0 ? features : defaultFeatures
 
-  // X軸のラベル（特徴量インデックス）- 100次元に対応
+  // Y軸の範囲
+  const maxFeatureValue = Math.max(...displayFeatures)
+  const yAxisRange = maxFeatureValue > 100 ? undefined : [0, 100]
   const xLabels = displayFeatures.map((_, index) => `${index + 1}`)
 
   const plotData = [
@@ -37,7 +39,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
 
   const layout = {
     title: {
-      text: '画像特徴量',
+      text: 'HLAC特徴量 (25次元)',
       font: {
         size: 18,
         color: '#333'
@@ -45,25 +47,25 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
     },
     xaxis: {
       title: {
-        text: '特徴量インデックス',
+        text: 'マスクID',
         font: {
           size: 14,
           color: '#666'
         }
       },
       tickangle: -45,
-      // 100個の特徴量があるのでラベル表示を間引き
-      dtick: 10
+      dtick: 5
     },
     yaxis: {
       title: {
-        text: '特徴量の値',
+        text: '特徴量',
         font: {
           size: 14,
           color: '#666'
         }
       },
-      range: [0, 100]
+      range: yAxisRange,
+      rangemode: 'nonnegative' as const
     },
     plot_bgcolor: '#FAFAFA',
     paper_bgcolor: '#FAFAFA',
