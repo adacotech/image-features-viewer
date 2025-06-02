@@ -1,15 +1,17 @@
 import React, { useRef, useState } from 'react'
 import HeaderComponent from '../../components/Header'
 import CanvasComponent from '../../components/Canvas'
-import type { CanvasRef } from '../../components/Canvas'
+import type { CanvasRef, DrawMode } from '../../components/Canvas'
 import GraphComponent from '../../components/Graph'
 import ClearButton from '../../components/ControlPanel/ClearButton'
+import DrawModeButton from '../../components/ControlPanel/DrawModeButton'
 import { extractFeatures } from '../../utils/features'
 
 const MainPage: React.FC = () => {
   const canvasRef = useRef<CanvasRef>(null)
   const [features, setFeatures] = useState<number[]>([])
   const [isCalculating, setIsCalculating] = useState(false)
+  const [drawMode, setDrawMode] = useState<DrawMode>('freehand')
 
   const handleImageDataChange = async (imageData: ImageData) => {
     console.log('ImageData updated:', imageData.width, 'x', imageData.height)
@@ -22,7 +24,7 @@ const MainPage: React.FC = () => {
       setFeatures(extractedFeatures)
     } catch (error) {
       console.error('特徴量抽出エラー:', error)
-      setFeatures([]) // エラー時は空配列
+      setFeatures([])
     } finally {
       setIsCalculating(false)
     }
@@ -30,7 +32,11 @@ const MainPage: React.FC = () => {
 
   const handleClearCanvas = () => {
     canvasRef.current?.clearCanvas()
-    setFeatures([]) // グラフもクリア
+    setFeatures([])
+  }
+
+  const handleModeChange = (mode: DrawMode) => {
+    setDrawMode(mode)
   }
 
   return (
@@ -47,7 +53,8 @@ const MainPage: React.FC = () => {
         {/* Canvas Area */}
         <CanvasComponent 
           ref={canvasRef}
-          onImageDataChange={handleImageDataChange} 
+          onImageDataChange={handleImageDataChange}
+          drawMode={drawMode}
         />
 
         {/* Graph Area */}
@@ -66,6 +73,11 @@ const MainPage: React.FC = () => {
         justifyContent: 'center',
         gap: '1rem'
       }}>
+        <DrawModeButton 
+          currentMode={drawMode}
+          onModeChange={handleModeChange}
+          disabled={isCalculating}
+        />
         <ClearButton onClear={handleClearCanvas} />
       </footer>
     </div>
