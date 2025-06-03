@@ -19,6 +19,21 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
   const yAxisRange = maxFeatureValue > 100 ? undefined : [0, 100]
   const xLabels = displayFeatures.map((_, index) => `${index + 1}`)
 
+  // HLACマスク画像アノテーション
+  const imageAnnotations = displayFeatures.map((_, index) => ({
+    source: `/bin/hlac_mask/${index}.png`,
+    xref: 'x' as const,
+    yref: 'paper' as const,
+    x: index + 1,
+    y: -0.06,
+    sizex: 0.9,
+    sizey: 0.5,
+    xanchor: 'center' as const,
+    yanchor: 'middle' as const,
+    layer: 'below' as const,
+    sizing: 'contain' as const
+  }))
+
   const plotData = [
     {
       x: xLabels,
@@ -51,10 +66,11 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
         font: {
           size: 14,
           color: '#666'
-        }
+        },
+        standoff: 60
       },
-      tickangle: -45,
-      dtick: 5
+      dtick: 1,
+      range: [0.5, 25.5]
     },
     yaxis: {
       title: {
@@ -67,13 +83,14 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
       range: yAxisRange,
       rangemode: 'nonnegative' as const
     },
+    images: imageAnnotations,
     plot_bgcolor: '#FAFAFA',
     paper_bgcolor: '#FAFAFA',
     margin: {
       l: 60,
       r: 30,
       t: 60,
-      b: 80
+      b: 180
     },
     showlegend: false,
     font: {
