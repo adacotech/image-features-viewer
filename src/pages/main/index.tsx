@@ -11,7 +11,7 @@ const MainPage: React.FC = () => {
   const canvasRef = useRef<CanvasRef>(null)
   const [features, setFeatures] = useState<number[]>([])
   const [isCalculating, setIsCalculating] = useState(false)
-  const [drawMode, setDrawMode] = useState<DrawMode>('freehand')
+  const [drawMode, setDrawMode] = useState<DrawMode>('line')
 
   const handleImageDataChange = async (imageData: ImageData) => {
     console.log('ImageData updated:', imageData.width, 'x', imageData.height)

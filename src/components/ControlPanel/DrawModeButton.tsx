@@ -1,5 +1,7 @@
 import React from 'react'
-import Button from '../Button'
+import { IconButton, Tooltip, Box } from '@mui/material'
+import DrawIcon from '@mui/icons-material/Draw'
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule'
 
 export type DrawMode = 'freehand' | 'line'
 
@@ -14,18 +16,49 @@ const DrawModeButton: React.FC<DrawModeButtonProps> = ({
   onModeChange, 
   disabled = false 
 }) => {
-  const nextMode = currentMode === 'freehand' ? 'line' : 'freehand'
-  const buttonText = currentMode === 'freehand' ? '直線モード' : '自由線モード'
+  const getButtonStyle = (mode: DrawMode) => ({
+    color: currentMode === mode ? '#fff' : '#333333',
+    backgroundColor: currentMode === mode ? '#2196F3' : 'transparent',
+    '&:hover': {
+      backgroundColor: currentMode === mode ? '#1976D2' : 'rgba(33, 150, 243, 0.1)'
+    },
+    '&:focus': {
+      outline: 'none',
+      boxShadow: 'none'
+    },
+    '&:disabled': {
+      color: '#ccc',
+      backgroundColor: 'transparent'
+    },
+    margin: '0 2px'
+  })
   
   return (
-    <Button
-      variant="primary"
-      size="medium"
-      onClick={() => onModeChange(nextMode)}
-      disabled={disabled}
-    >
-      {buttonText}
-    </Button>
+    <Box sx={{ display: 'flex', gap: 0.5 }}>
+      <Tooltip title="自由線モード" placement="top">
+        <span>
+          <IconButton
+            onClick={() => onModeChange('freehand')}
+            disabled={disabled}
+            sx={getButtonStyle('freehand')}
+          >
+            <DrawIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
+      
+      <Tooltip title="直線モード（Shift+ドラッグで水平/垂直線）" placement="top">
+        <span>
+          <IconButton
+            onClick={() => onModeChange('line')}
+            disabled={disabled}
+            sx={getButtonStyle('line')}
+          >
+            <HorizontalRuleIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
+    </Box>
   )
 }
 
