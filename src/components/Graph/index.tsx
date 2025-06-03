@@ -21,7 +21,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
 
   // HLACマスク画像アノテーション
   const imageAnnotations = displayFeatures.map((_, index) => ({
-    source: `/bin/hlac_mask/${index}.png`,
+    source: `${import.meta.env.BASE_URL}bin/hlac_mask/${index}.png`,
     xref: 'x' as const,
     yref: 'paper' as const,
     x: index + 1,
