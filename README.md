@@ -5,27 +5,22 @@
 
 ## 主な機能
 
-- 640×480のCanvas上でマウス描画
+- Canvas上（640×480）でマウス描画
+  - 直線 or フリーハンド
 - Rust + WebAssemblyによる特徴量計算
+  - 25次元HLAC特徴量
 - Plotly.jsによる棒グラフ表示
 
 ## デモ
 
 [GitHub Pages でアプリケーションを試す](https://shinue-rebonire.github.io/image-features-viewer/)
 
-## 技術スタック
-
-- **フロントエンド**: React 19.1.0 + TypeScript
-- **ビルドツール**: Vite 6.3.5
-- **可視化**: React Plotly.js
-- **高速計算**: Rust + WebAssembly (wasm-pack)
-
 ## セットアップ
 
-### 前提条件
+### 前提
 
 - Node.js 20+
-- Rust (最新安定版)
+- Rust 1.82+
 - wasm-pack
 
 ### インストール
@@ -34,7 +29,7 @@
 # 依存関係をインストール
 npm install
 
-# wasm-packをインストール（未インストールの場合）
+# wasm-packをインストール
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 ```
 
