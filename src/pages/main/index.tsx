@@ -41,36 +41,32 @@ const MainPage: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Title Header Area */}
       <HeaderComponent />
 
-      {/* Main Content Area */}
       <main style={{ 
         flex: 1, 
         display: 'flex',
         minHeight: 0
       }}>
-        {/* Canvas Area */}
         <CanvasComponent 
           ref={canvasRef}
           onImageDataChange={handleImageDataChange}
           drawMode={drawMode}
         />
 
-        {/* Graph Area */}
         <GraphComponent 
           features={features}
           isLoading={isCalculating}
         />
       </main>
 
-      {/* Control Panel Area */}
       <footer style={{ 
         padding: '1rem', 
         backgroundColor: '#f9f9f9',
         borderTop: '1px solid #ddd',
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
+        paddingLeft: 'calc(25% - 4rem)',
         gap: '1rem'
       }}>
         <DrawModeButton 
