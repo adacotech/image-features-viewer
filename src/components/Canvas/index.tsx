@@ -76,7 +76,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(({
     tempCtx.lineCap = 'round'
     tempCtx.lineJoin = 'round'
 
-    // キーボードイベントリスナーを追加
+    // キーボードイベントリスナー追加
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Shift') {
         setIsShiftPressed(true)
@@ -119,13 +119,29 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(({
     const deltaX = currentPos.x - startPos.x
     const deltaY = currentPos.y - startPos.y
 
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // 水平線（Y座標を開始点に固定）
-      return { x: currentPos.x, y: startPos.y }
-    } else {
-      // 垂直線（X座標を開始点に固定）
-      return { x: startPos.x, y: currentPos.y }
+    // 8方向に制限：0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°
+    const angle = Math.atan2(deltaY, deltaX)
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    
+    // 角度を8方向のうち最も近いものに丸める
+    const directions = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, -3*Math.PI/4, -Math.PI/2, -Math.PI/4]
+    
+    let closestDirection = directions[0]
+    let minDifference = Math.abs(angle - directions[0])
+    
+    for (const direction of directions) {
+      const difference = Math.abs(angle - direction)
+      if (difference < minDifference) {
+        minDifference = difference
+        closestDirection = direction
+      }
     }
+    
+    // 最も近い方向に沿って位置を計算
+    const constrainedX = startPos.x + distance * Math.cos(closestDirection)
+    const constrainedY = startPos.y + distance * Math.sin(closestDirection)
+    
+    return { x: constrainedX, y: constrainedY }
   }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -147,7 +163,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(({
     const currentPosition = getCanvasPosition(e)
 
     if (drawMode === 'freehand') {
-      // 自由線描画：直接メインCanvasに描画
       ctx.beginPath()
       ctx.moveTo(lastPosition.x, lastPosition.y)
       ctx.lineTo(currentPosition.x, currentPosition.y)
@@ -173,7 +188,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(({
 
   const stopDrawing = () => {
     if (drawMode === 'line' && isDrawing && startPosition) {
-      // 直線描画完了：一時Canvasの内容をメインCanvasに反映
       const canvas = canvasRef.current
       const tempCanvas = tempCanvasRef.current
       const ctx = canvas?.getContext('2d')

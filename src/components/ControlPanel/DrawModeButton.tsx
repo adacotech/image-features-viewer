@@ -47,7 +47,7 @@ const DrawModeButton: React.FC<DrawModeButtonProps> = ({
         </span>
       </Tooltip>
       
-      <Tooltip title="直線モード（Shift+ドラッグで水平/垂直線）" placement="top">
+      <Tooltip title="直線モード（Shift+ドラッグで8方向制限）" placement="top">
         <span>
           <IconButton
             onClick={() => onModeChange('line')}
