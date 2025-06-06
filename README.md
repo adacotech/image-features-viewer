@@ -13,7 +13,7 @@
 
 ## デモ
 
-[GitHub Pages でアプリケーションを試す](https://shinue-rebonire.github.io/image-features-viewer/)
+[GitHub Pages でアプリケーションを試す](https://adacotech.github.io/image-features-viewer/)
 
 ## セットアップ
 

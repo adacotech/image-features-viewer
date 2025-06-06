@@ -4,7 +4,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://shinue-rebonire.github.io/image-features-viewer",
+  "homepage": "https://adacotech.github.io/image-features-viewer",
   "scripts": {
     "dev": "vite",
     "build": "npm run build:wasm && tsc -b && vite build",
