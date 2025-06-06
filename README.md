@@ -13,7 +13,9 @@
 
 ## デモ
 
-[GitHub Pages でアプリケーションを試す](https://adacotech.github.io/image-features-viewer/)
+~~GitHub Pages でアプリケーションを試す~~  
+GitHub Pagesの設定が完了していないので、Fork元のリポジトリ（SHINue-rebonire氏）のGitHub Pagesリンク貼っておきます。  
+https://shinue-rebonire.github.io/image-features-viewer/
 
 ## セットアップ
 
