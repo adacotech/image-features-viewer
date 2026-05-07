@@ -15,9 +15,9 @@ const MainPage: React.FC = () => {
 
   const handleImageDataChange = async (imageData: ImageData) => {
     console.log('ImageData updated:', imageData.width, 'x', imageData.height)
-    
+
     setIsCalculating(true)
-    
+
     try {
       // WASM特徴量抽出（非同期）
       const extractedFeatures = await extractFeatures(imageData)
@@ -43,33 +43,34 @@ const MainPage: React.FC = () => {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <HeaderComponent />
 
-      <main style={{ 
-        flex: 1, 
-        display: 'flex',
-        minHeight: 0
-      }}>
-        <CanvasComponent 
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          minHeight: 0,
+        }}
+      >
+        <CanvasComponent
           ref={canvasRef}
           onImageDataChange={handleImageDataChange}
           drawMode={drawMode}
         />
 
-        <GraphComponent 
-          features={features}
-          isLoading={isCalculating}
-        />
+        <GraphComponent features={features} isLoading={isCalculating} />
       </main>
 
-      <footer style={{ 
-        padding: '1rem', 
-        backgroundColor: '#f9f9f9',
-        borderTop: '1px solid #ddd',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        paddingLeft: 'calc(25% - 4rem)',
-        gap: '1rem'
-      }}>
-        <DrawModeButton 
+      <footer
+        style={{
+          padding: '1rem',
+          backgroundColor: '#f9f9f9',
+          borderTop: '1px solid #ddd',
+          display: 'flex',
+          justifyContent: 'flex-start',
+          paddingLeft: 'calc(25% - 4rem)',
+          gap: '1rem',
+        }}
+      >
+        <DrawModeButton
           currentMode={drawMode}
           onModeChange={handleModeChange}
           disabled={isCalculating}
@@ -80,4 +81,4 @@ const MainPage: React.FC = () => {
   )
 }
 
-export default MainPage 
+export default MainPage

@@ -11,28 +11,29 @@ interface DrawModeButtonProps {
   disabled?: boolean
 }
 
-const DrawModeButton: React.FC<DrawModeButtonProps> = ({ 
-  currentMode, 
-  onModeChange, 
-  disabled = false 
+const DrawModeButton: React.FC<DrawModeButtonProps> = ({
+  currentMode,
+  onModeChange,
+  disabled = false,
 }) => {
   const getButtonStyle = (mode: DrawMode) => ({
     color: currentMode === mode ? '#fff' : '#333333',
     backgroundColor: currentMode === mode ? '#2196F3' : 'transparent',
     '&:hover': {
-      backgroundColor: currentMode === mode ? '#1976D2' : 'rgba(33, 150, 243, 0.1)'
+      backgroundColor:
+        currentMode === mode ? '#1976D2' : 'rgba(33, 150, 243, 0.1)',
     },
     '&:focus': {
       outline: 'none',
-      boxShadow: 'none'
+      boxShadow: 'none',
     },
     '&:disabled': {
       color: '#ccc',
-      backgroundColor: 'transparent'
+      backgroundColor: 'transparent',
     },
-    margin: '0 2px'
+    margin: '0 2px',
   })
-  
+
   return (
     <Box sx={{ display: 'flex', gap: 0.5 }}>
       <Tooltip title="自由線モード" placement="top">
@@ -46,7 +47,7 @@ const DrawModeButton: React.FC<DrawModeButtonProps> = ({
           </IconButton>
         </span>
       </Tooltip>
-      
+
       <Tooltip title="直線モード（Shift+ドラッグで8方向制限）" placement="top">
         <span>
           <IconButton
@@ -62,4 +63,4 @@ const DrawModeButton: React.FC<DrawModeButtonProps> = ({
   )
 }
 
-export default DrawModeButton 
+export default DrawModeButton
