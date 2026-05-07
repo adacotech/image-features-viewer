@@ -15,7 +15,7 @@ const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'medium',
   disabled = false,
-  className = ''
+  className = '',
 }) => {
   const getVariantStyles = () => {
     switch (variant) {
@@ -24,28 +24,28 @@ const Button: React.FC<ButtonProps> = ({
           backgroundColor: '#2196F3',
           color: '#FFFFFF',
           border: 'none',
-          '&:hover': '#1976D2'
+          '&:hover': '#1976D2',
         }
       case 'secondary':
         return {
           backgroundColor: '#F5F5F5',
           color: '#333333',
           border: '1px solid #CCCCCC',
-          '&:hover': '#E0E0E0'
+          '&:hover': '#E0E0E0',
         }
       case 'danger':
         return {
           backgroundColor: '#F44336',
           color: '#FFFFFF',
           border: 'none',
-          '&:hover': '#D32F2F'
+          '&:hover': '#D32F2F',
         }
       default:
         return {
           backgroundColor: '#2196F3',
           color: '#FFFFFF',
           border: 'none',
-          '&:hover': '#1976D2'
+          '&:hover': '#1976D2',
         }
     }
   }
@@ -55,22 +55,22 @@ const Button: React.FC<ButtonProps> = ({
       case 'small':
         return {
           padding: '6px 12px',
-          fontSize: '12px'
+          fontSize: '12px',
         }
       case 'medium':
         return {
           padding: '8px 16px',
-          fontSize: '14px'
+          fontSize: '14px',
         }
       case 'large':
         return {
           padding: '12px 24px',
-          fontSize: '16px'
+          fontSize: '16px',
         }
       default:
         return {
           padding: '8px 16px',
-          fontSize: '14px'
+          fontSize: '14px',
         }
     }
   }
@@ -97,12 +97,14 @@ const Button: React.FC<ButtonProps> = ({
         opacity: disabled ? 0.6 : 1,
         outline: 'none',
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        ...(disabled ? {} : {
-          ':hover': {
-            backgroundColor: variantStyles['&:hover'],
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)'
-          }
-        })
+        ...(disabled
+          ? {}
+          : {
+              ':hover': {
+                backgroundColor: variantStyles['&:hover'],
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+              },
+            }),
       }}
       onMouseEnter={(e) => {
         if (!disabled && variantStyles['&:hover']) {
@@ -122,4 +124,4 @@ const Button: React.FC<ButtonProps> = ({
   )
 }
 
-export default Button 
+export default Button
