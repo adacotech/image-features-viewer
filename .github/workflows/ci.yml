@@ -8,7 +8,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WASM_PACK_VERSION: '0.13.1'
 
 jobs:
   build:
@@ -31,16 +34,15 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache wasm-pack
+        id: cache-wasm-pack
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/wasm-pack
-          key: wasm-pack-${{ runner.os }}
+          key: wasm-pack-${{ runner.os }}-${{ env.WASM_PACK_VERSION }}
 
       - name: Install wasm-pack
-        run: |
-          if ! command -v wasm-pack >/dev/null; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          fi
+        if: steps.cache-wasm-pack.outputs.cache-hit != 'true'
+        run: cargo install wasm-pack --version ${{ env.WASM_PACK_VERSION }} --locked
 
       - name: Install dependencies
         run: npm ci
