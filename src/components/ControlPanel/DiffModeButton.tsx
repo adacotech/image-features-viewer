@@ -2,8 +2,9 @@ import React from 'react'
 import { IconButton, Tooltip, Box } from '@mui/material'
 import BarChartIcon from '@mui/icons-material/BarChart'
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows'
+import QueryStatsIcon from '@mui/icons-material/QueryStats'
 
-export type DiffMode = 'compare' | 'diff'
+export type DiffMode = 'compare' | 'diff' | 'stats'
 
 interface DiffModeButtonProps {
   currentMode: DiffMode
@@ -63,6 +64,19 @@ const DiffModeButton: React.FC<DiffModeButtonProps> = ({
             sx={getButtonStyle('diff')}
           >
             <CompareArrowsIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
+
+      <Tooltip title="統計比較 次数別 (x−μ)/(σ+1)" placement="top">
+        <span>
+          <IconButton
+            aria-label="統計比較モード"
+            onClick={() => onModeChange('stats')}
+            disabled={disabled}
+            sx={getButtonStyle('stats')}
+          >
+            <QueryStatsIcon />
           </IconButton>
         </span>
       </Tooltip>

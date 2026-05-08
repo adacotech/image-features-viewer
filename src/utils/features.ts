@@ -10,6 +10,38 @@ export const FEATURE_DIMS: Record<FeatureMode, number> = {
   grayscale: 35,
 }
 
+// Why: HLAC マスクは次数（0次/1次/2次）ごとに連続インデックスで構成されている。
+// 統計比較モードで「次数ごとの平均」を計算するために構成を1か所にまとめる。
+//   binary  : 0次 [0..1), 1次 [1..5), 2次 [5..25)
+//   grayscale: 0次 [0..1), 1次 [1..5), 2次 [5..35) （追加マスクも全て2次）
+export type FeatureOrder = 0 | 1 | 2
+
+export const FEATURE_ORDER_RANGES: Record<
+  FeatureMode,
+  Record<FeatureOrder, [number, number]>
+> = {
+  binary: {
+    0: [0, 1],
+    1: [1, 5],
+    2: [5, 25],
+  },
+  grayscale: {
+    0: [0, 1],
+    1: [1, 5],
+    2: [5, 35],
+  },
+}
+
+export const getFeatureOrder = (
+  mode: FeatureMode,
+  index: number,
+): FeatureOrder => {
+  const ranges = FEATURE_ORDER_RANGES[mode]
+  if (index >= ranges[0][0] && index < ranges[0][1]) return 0
+  if (index >= ranges[1][0] && index < ranges[1][1]) return 1
+  return 2
+}
+
 let wasmInitialized = false
 
 async function initWasm() {

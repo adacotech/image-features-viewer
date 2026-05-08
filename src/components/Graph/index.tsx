@@ -1,14 +1,22 @@
 import React from 'react'
 import Plot from 'react-plotly.js'
-import { FEATURE_DIMS, type FeatureMode } from '../../utils/features'
+import {
+  FEATURE_DIMS,
+  FEATURE_ORDER_RANGES,
+  getFeatureOrder,
+  type FeatureMode,
+  type FeatureOrder,
+} from '../../utils/features'
+
+export type GraphDisplayMode = 'compare' | 'diff' | 'stats'
 
 interface GraphComponentProps {
   featuresA?: number[]
   featuresB?: number[]
   isLoading?: boolean
   mode?: FeatureMode
-  // Why: 比較表示(false) と 差分表示(true, A-B) を切り替える
-  diffMode?: boolean
+  // Why: 比較(compare) / 差分(diff, A-B) / 統計比較(stats, 次数別 (x−μ)/(σ+1)) を切替
+  displayMode?: GraphDisplayMode
 }
 
 // Why: A/B を見分ける固定カラー（凡例・色弁別性を考慮して青/橙）
@@ -25,7 +33,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
   featuresB = [],
   isLoading = false,
   mode = 'binary',
-  diffMode = false,
+  displayMode = 'compare',
 }) => {
   const dims = FEATURE_DIMS[mode]
   const defaultFeatures = new Array(dims).fill(0)
@@ -37,11 +45,64 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
   // 差分系列（A - B）
   const seriesDiff = seriesA.map((value, index) => value - seriesB[index])
 
-  // Y軸範囲：差分時は対称に、比較時は従来同様 nonnegative
+  // 統計比較：次数ごとに A・B を合算した平均 μ と標準偏差 σ を求め、(x − μ) / (σ + 1) に標準化する
+  // Why: A/B 共通基準で μ を取ることで両者の偏りが直接比較でき、σ で割ることで
+  //      0次〜2次でスケールが大きく異なる HLAC 値を同じ尺度に揃えて並べられる。
+  //      σ + 1 にしているのは、σ=0（次数内が一様）の場合の0除算回避と、
+  //      σ が極端に小さい場合の発散を抑えるため。
+  const orderStats: Record<FeatureOrder, { mean: number; std: number }> =
+    (() => {
+      const ranges = FEATURE_ORDER_RANGES[mode]
+      const result = {
+        0: { mean: 0, std: 0 },
+        1: { mean: 0, std: 0 },
+        2: { mean: 0, std: 0 },
+      } as Record<FeatureOrder, { mean: number; std: number }>
+      ;([0, 1, 2] as FeatureOrder[]).forEach((order) => {
+        const [start, end] = ranges[order]
+        const count = end - start
+        if (count <= 0) return
+        let sum = 0
+        for (let i = start; i < end; i += 1) {
+          sum += seriesA[i] + seriesB[i]
+        }
+        const mean = sum / (count * 2)
+        let sqSum = 0
+        for (let i = start; i < end; i += 1) {
+          const dA = seriesA[i] - mean
+          const dB = seriesB[i] - mean
+          sqSum += dA * dA + dB * dB
+        }
+        const std = Math.sqrt(sqSum / (count * 2))
+        result[order] = { mean, std }
+      })
+      return result
+    })()
+
+  const standardize = (value: number, index: number) => {
+    const { mean, std } = orderStats[getFeatureOrder(mode, index)]
+    return (value - mean) / (std + 1)
+  }
+  const seriesStatsA = seriesA.map(standardize)
+  const seriesStatsB = seriesB.map(standardize)
+
+  const isDiff = displayMode === 'diff'
+  const isStats = displayMode === 'stats'
+
+  // Y軸範囲：差分・統計比較は対称、比較表示は従来通り nonnegative
   const yAxisRange: [number, number] | undefined = (() => {
-    if (diffMode) {
+    if (isDiff) {
       const absMax = Math.max(...seriesDiff.map((value) => Math.abs(value)), 0)
       // Why: ゼロ周辺でも見やすいよう最低限の余白を確保
+      const range = absMax === 0 ? 1 : absMax * 1.1
+      return [-range, range]
+    }
+    if (isStats) {
+      const absMax = Math.max(
+        ...seriesStatsA.map((value) => Math.abs(value)),
+        ...seriesStatsB.map((value) => Math.abs(value)),
+        0,
+      )
       const range = absMax === 0 ? 1 : absMax * 1.1
       return [-range, range]
     }
@@ -67,7 +128,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
     sizing: 'contain' as const,
   }))
 
-  const plotData = diffMode
+  const plotData = isDiff
     ? [
         {
           x: xLabels,
@@ -91,32 +152,62 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
           name: 'A − B',
         },
       ]
-    : [
-        {
-          x: xLabels,
-          y: seriesA,
-          type: 'bar' as const,
-          marker: {
-            color: seriesA.map((value) => (value > 0 ? COLOR_A : '#E0E0E0')),
-            line: { color: COLOR_A_LINE, width: 1 },
+    : isStats
+      ? [
+          {
+            x: xLabels,
+            y: seriesStatsA,
+            type: 'bar' as const,
+            marker: {
+              color: seriesStatsA.map((value) =>
+                value === 0 ? '#E0E0E0' : COLOR_A,
+              ),
+              line: { color: COLOR_A_LINE, width: 1 },
+            },
+            name: 'A 標準化',
           },
-          name: 'A',
-        },
-        {
-          x: xLabels,
-          y: seriesB,
-          type: 'bar' as const,
-          marker: {
-            color: seriesB.map((value) => (value > 0 ? COLOR_B : '#E0E0E0')),
-            line: { color: COLOR_B_LINE, width: 1 },
+          {
+            x: xLabels,
+            y: seriesStatsB,
+            type: 'bar' as const,
+            marker: {
+              color: seriesStatsB.map((value) =>
+                value === 0 ? '#E0E0E0' : COLOR_B,
+              ),
+              line: { color: COLOR_B_LINE, width: 1 },
+            },
+            name: 'B 標準化',
           },
-          name: 'B',
-        },
-      ]
+        ]
+      : [
+          {
+            x: xLabels,
+            y: seriesA,
+            type: 'bar' as const,
+            marker: {
+              color: seriesA.map((value) => (value > 0 ? COLOR_A : '#E0E0E0')),
+              line: { color: COLOR_A_LINE, width: 1 },
+            },
+            name: 'A',
+          },
+          {
+            x: xLabels,
+            y: seriesB,
+            type: 'bar' as const,
+            marker: {
+              color: seriesB.map((value) => (value > 0 ? COLOR_B : '#E0E0E0')),
+              line: { color: COLOR_B_LINE, width: 1 },
+            },
+            name: 'B',
+          },
+        ]
 
-  const titleText = diffMode
-    ? `HLAC特徴量 差分 A − B (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`
-    : `HLAC特徴量 A / B 比較 (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`
+  const modeLabel = mode === 'binary' ? '2値' : '濃淡'
+  const titleText = isDiff
+    ? `HLAC特徴量 差分 A − B (${dims}次元・${modeLabel})`
+    : isStats
+      ? `HLAC特徴量 統計比較 次数別 (x−μ)/(σ+1) (${dims}次元・${modeLabel})`
+      : `HLAC特徴量 A / B 比較 (${dims}次元・${modeLabel})`
 
   const layout = {
     title: {
@@ -147,9 +238,9 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
         },
       },
       range: yAxisRange,
-      // Why: 差分表示時のみ負値を許可、比較表示は従来通り非負レンジ
-      ...(diffMode ? {} : { rangemode: 'nonnegative' as const }),
-      ...(diffMode ? { zeroline: true, zerolinecolor: '#999' } : {}),
+      // Why: 差分・統計比較は負値を許可、比較表示は従来通り非負レンジ
+      ...(isDiff || isStats ? {} : { rangemode: 'nonnegative' as const }),
+      ...(isDiff || isStats ? { zeroline: true, zerolinecolor: '#999' } : {}),
     },
     images: imageAnnotations,
     plot_bgcolor: '#FAFAFA',
@@ -161,7 +252,8 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
       b: 180,
     },
     barmode: 'group' as const,
-    showlegend: !diffMode,
+    // Why: 差分は1系列なので凡例非表示、比較・統計比較はA/Bを区別するため表示
+    showlegend: !isDiff,
     legend: {
       orientation: 'h' as const,
       x: 1,
