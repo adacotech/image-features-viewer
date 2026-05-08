@@ -445,9 +445,15 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                       backgroundColor: 'rgba(0, 0, 0, 0.7)',
                       color: '#ffffff',
                     },
+                    // Why: マウス操作時にはリングを出さないが、キーボード操作時の
+                    //      フォーカス位置はアクセシビリティ上必ず可視化する。
                     '&:focus': {
                       outline: 'none',
                       boxShadow: 'none',
+                    },
+                    '&:focus-visible': {
+                      outline: '2px solid #9ec5ff',
+                      outlineOffset: 2,
                     },
                   }}
                 >
@@ -470,9 +476,15 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                         backgroundColor: 'rgba(0, 0, 0, 0.7)',
                         color: '#ff2323',
                       },
+                      // Why: マウス操作時にはリングを出さないが、キーボード操作時の
+                      //      フォーカス位置はアクセシビリティ上必ず可視化する。
                       '&:focus': {
                         outline: 'none',
                         boxShadow: 'none',
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid #ff6b6b',
+                        outlineOffset: 2,
                       },
                     }}
                   >
