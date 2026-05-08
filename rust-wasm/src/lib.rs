@@ -91,6 +91,12 @@ pub fn calculate_features_grayscale(
         return f.to_vec();
     }
 
+    // Why: image_data 長が width*height 未満なら範囲外参照で panic する。
+    // wasm-bindgen 経由で JS から呼ばれるため、入力サイズの取り違えを境界で守る。
+    if image_data.len() < width * height {
+        return f.to_vec();
+    }
+
     let at = |y: usize, x: usize| -> f64 { image_data[y * width + x] };
 
     for y in 0..(height - 2 * corr) {

@@ -31,12 +31,15 @@ const MainPage: React.FC = () => {
   }
 
   const handleImageDataChange = async (imageData: ImageData) => {
+    console.log('ImageData updated:', imageData.width, 'x', imageData.height)
     lastImageDataRef.current = imageData
     await computeFeatures(imageData, featureMode)
   }
 
   const handleClearCanvas = () => {
     canvasRef.current?.clearCanvas()
+    // クリア後にモード切替が走っても古い ImageData を使い回さないよう ref も破棄する
+    lastImageDataRef.current = null
     setFeatures([])
   }
 
@@ -46,7 +49,6 @@ const MainPage: React.FC = () => {
 
   const handleFeatureModeChange = async (mode: FeatureMode) => {
     setFeatureMode(mode)
-    // モード切替の直後に最新Canvas内容で再計算（描画済みの場合のみ）
     if (lastImageDataRef.current) {
       await computeFeatures(lastImageDataRef.current, mode)
     } else {
@@ -58,11 +60,13 @@ const MainPage: React.FC = () => {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <HeaderComponent />
 
-      <main style={{
-        flex: 1,
-        display: 'flex',
-        minHeight: 0
-      }}>
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          minHeight: 0,
+        }}
+      >
         <CanvasComponent
           ref={canvasRef}
           onImageDataChange={handleImageDataChange}
@@ -76,15 +80,17 @@ const MainPage: React.FC = () => {
         />
       </main>
 
-      <footer style={{
-        padding: '1rem',
-        backgroundColor: '#f9f9f9',
-        borderTop: '1px solid #ddd',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        paddingLeft: 'calc(25% - 4rem)',
-        gap: '1rem'
-      }}>
+      <footer
+        style={{
+          padding: '1rem',
+          backgroundColor: '#f9f9f9',
+          borderTop: '1px solid #ddd',
+          display: 'flex',
+          justifyContent: 'flex-start',
+          paddingLeft: 'calc(25% - 4rem)',
+          gap: '1rem',
+        }}
+      >
         <DrawModeButton
           currentMode={drawMode}
           onModeChange={handleModeChange}

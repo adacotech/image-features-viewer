@@ -37,7 +37,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
     xanchor: 'center' as const,
     yanchor: 'middle' as const,
     layer: 'below' as const,
-    sizing: 'contain' as const
+    sizing: 'contain' as const,
   }))
 
   const plotData = [
@@ -46,16 +46,16 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
       y: displayFeatures,
       type: 'bar' as const,
       marker: {
-        color: displayFeatures.map(value =>
-          value > 0 ? '#2196F3' : '#E0E0E0'
+        color: displayFeatures.map((value) =>
+          value > 0 ? '#2196F3' : '#E0E0E0',
         ),
         line: {
           color: '#1976D2',
-          width: 1
-        }
+          width: 1,
+        },
       },
-      name: '特徴量値'
-    }
+      name: '特徴量値',
+    },
   ]
 
   const layout = {
@@ -63,31 +63,31 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
       text: `HLAC特徴量 (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`,
       font: {
         size: 18,
-        color: '#333'
-      }
+        color: '#333',
+      },
     },
     xaxis: {
       title: {
         text: 'マスクID',
         font: {
           size: 14,
-          color: '#666'
+          color: '#666',
         },
-        standoff: 60
+        standoff: 60,
       },
       dtick: 1,
-      range: [0.5, dims + 0.5]
+      range: [0.5, dims + 0.5],
     },
     yaxis: {
       title: {
         text: '特徴量',
         font: {
           size: 14,
-          color: '#666'
-        }
+          color: '#666',
+        },
       },
       range: yAxisRange,
-      rangemode: 'nonnegative' as const
+      rangemode: 'nonnegative' as const,
     },
     images: imageAnnotations,
     plot_bgcolor: '#FAFAFA',
@@ -96,67 +96,75 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
       l: 60,
       r: 30,
       t: 60,
-      b: 180
+      b: 180,
     },
     showlegend: false,
     font: {
-      family: '"Noto Sans JP", Arial, sans-serif'
-    }
+      family: '"Noto Sans JP", Arial, sans-serif',
+    },
   }
 
   const config = {
     displayModeBar: false,
-    responsive: true
+    responsive: true,
   }
 
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: '#FAFAFA',
-      padding: '20px',
-      borderLeft: '1px solid #ddd',
-      boxSizing: 'border-box',
-      position: 'relative'
-    }}>
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#FAFAFA',
+        padding: '20px',
+        borderLeft: '1px solid #ddd',
+        boxSizing: 'border-box',
+        position: 'relative',
+      }}
+    >
       <Plot
         data={plotData}
         layout={layout}
         config={config}
         style={{
           width: '100%',
-          height: '100%'
+          height: '100%',
         }}
         useResizeHandler={true}
       />
 
       {isLoading && (
-        <div style={{
-          position: 'absolute',
-          top: '0',
-          left: '0',
-          right: '0',
-          bottom: '0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(250, 250, 250, 0.8)',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid #E0E0E0',
-            borderTop: '4px solid #2196F3',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }} />
-          <div style={{
-            color: '#666',
-            fontSize: '14px'
-          }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            right: '0',
+            bottom: '0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(250, 250, 250, 0.8)',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}
+        >
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '4px solid #E0E0E0',
+              borderTop: '4px solid #2196F3',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
+          <div
+            style={{
+              color: '#666',
+              fontSize: '14px',
+            }}
+          >
             特徴量を計算中...
           </div>
           <style>

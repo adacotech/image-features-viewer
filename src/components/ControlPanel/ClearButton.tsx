@@ -7,7 +7,10 @@ interface ClearButtonProps {
   disabled?: boolean
 }
 
-const ClearButton: React.FC<ClearButtonProps> = ({ onClear, disabled = false }) => {
+const ClearButton: React.FC<ClearButtonProps> = ({
+  onClear,
+  disabled = false,
+}) => {
   return (
     <Tooltip title="描画クリア" placement="top">
       <span>
@@ -17,15 +20,15 @@ const ClearButton: React.FC<ClearButtonProps> = ({ onClear, disabled = false }) 
           sx={{
             color: '#ff2323',
             '&:hover': {
-              backgroundColor: 'rgba(244, 67, 54, 0.1)'
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
             },
             '&:focus': {
               outline: 'none',
-              boxShadow: 'none'
+              boxShadow: 'none',
             },
             '&:disabled': {
-              color: '#ccc'
-            }
+              color: '#ccc',
+            },
           }}
         >
           <DeleteIcon />
@@ -35,4 +38,4 @@ const ClearButton: React.FC<ClearButtonProps> = ({ onClear, disabled = false }) 
   )
 }
 
-export default ClearButton 
+export default ClearButton
