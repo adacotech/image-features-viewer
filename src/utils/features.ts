@@ -10,6 +10,77 @@ export const FEATURE_DIMS: Record<FeatureMode, number> = {
   grayscale: 35,
 }
 
+// Why: HLAC マスクは次数（0次/1次/2次）ごとに連続インデックスで構成されている。
+// 統計比較モードで「次数ごとの平均」を計算するために構成を1か所にまとめる。
+//   binary  : 0次 [0..1), 1次 [1..5), 2次 [5..25)
+//   grayscale: 0次 [0..1), 1次 [1..5), 2次 [5..35) （追加マスクも全て2次）
+export type FeatureOrder = 0 | 1 | 2
+
+export const FEATURE_ORDER_RANGES: Record<
+  FeatureMode,
+  Record<FeatureOrder, [number, number]>
+> = {
+  binary: {
+    0: [0, 1],
+    1: [1, 5],
+    2: [5, 25],
+  },
+  grayscale: {
+    0: [0, 1],
+    1: [1, 5],
+    2: [5, 35],
+  },
+}
+
+export const getFeatureOrder = (
+  mode: FeatureMode,
+  index: number,
+): FeatureOrder => {
+  const ranges = FEATURE_ORDER_RANGES[mode]
+  if (index >= ranges[0][0] && index < ranges[0][1]) return 0
+  if (index >= ranges[1][0] && index < ranges[1][1]) return 1
+  return 2
+}
+
+export interface OrderStat {
+  mean: number
+  std: number
+}
+
+// Why: 統計比較モード用に、次数ごとの平均 μ と標準偏差 σ を A・B 合算で算出する純関数。
+// Graph コンポーネント本体から計算ロジックを分離し、ユニットテストを書きやすくする。
+// σ そのもの（+1 補正なし）を返し、補正は呼び出し側の責務にする。
+export const computeOrderStats = (
+  mode: FeatureMode,
+  seriesA: number[],
+  seriesB: number[],
+): Record<FeatureOrder, OrderStat> => {
+  const ranges = FEATURE_ORDER_RANGES[mode]
+  const result: Record<FeatureOrder, OrderStat> = {
+    0: { mean: 0, std: 0 },
+    1: { mean: 0, std: 0 },
+    2: { mean: 0, std: 0 },
+  }
+  for (const order of [0, 1, 2] as FeatureOrder[]) {
+    const [start, end] = ranges[order]
+    const count = end - start
+    if (count <= 0) continue
+    let sum = 0
+    for (let i = start; i < end; i += 1) {
+      sum += (seriesA[i] ?? 0) + (seriesB[i] ?? 0)
+    }
+    const mean = sum / (count * 2)
+    let sqSum = 0
+    for (let i = start; i < end; i += 1) {
+      const dA = (seriesA[i] ?? 0) - mean
+      const dB = (seriesB[i] ?? 0) - mean
+      sqSum += dA * dA + dB * dB
+    }
+    result[order] = { mean, std: Math.sqrt(sqSum / (count * 2)) }
+  }
+  return result
+}
+
 let wasmInitialized = false
 
 async function initWasm() {

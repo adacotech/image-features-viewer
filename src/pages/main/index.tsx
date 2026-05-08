@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useId, useRef, useState } from 'react'
 import HeaderComponent from '../../components/Header'
 import CanvasComponent from '../../components/Canvas'
 import type { CanvasRef, DrawMode } from '../../components/Canvas'
@@ -6,7 +6,7 @@ import GraphComponent from '../../components/Graph'
 import DrawModeButton from '../../components/ControlPanel/DrawModeButton'
 import FeatureModeButton from '../../components/ControlPanel/FeatureModeButton'
 import DiffModeButton from '../../components/ControlPanel/DiffModeButton'
-import type { DiffMode } from '../../components/ControlPanel/DiffModeButton'
+import type { DisplayMode } from '../../components/ControlPanel/DiffModeButton'
 import { extractFeatures, type FeatureMode } from '../../utils/features'
 
 type CanvasTarget = 'A' | 'B'
@@ -20,7 +20,7 @@ const MainPage: React.FC = () => {
   const [isCalculatingB, setIsCalculatingB] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>('line')
   const [featureMode, setFeatureMode] = useState<FeatureMode>('binary')
-  const [diffMode, setDiffMode] = useState<DiffMode>('compare')
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('compare')
   // Why: 直近のImageDataをA/B別々に保持し、特徴量モード切替時に再計算する
   const lastImageDataRefA = useRef<ImageData | null>(null)
   const lastImageDataRefB = useRef<ImageData | null>(null)
@@ -89,8 +89,8 @@ const MainPage: React.FC = () => {
     await Promise.all(tasks)
   }
 
-  const handleDiffModeChange = (mode: DiffMode) => {
-    setDiffMode(mode)
+  const handleDisplayModeChange = (mode: DisplayMode) => {
+    setDisplayMode(mode)
   }
 
   const isCalculating = isCalculatingA || isCalculatingB
@@ -135,7 +135,7 @@ const MainPage: React.FC = () => {
           featuresB={featuresB}
           isLoading={isCalculating}
           mode={featureMode}
-          diffMode={diffMode === 'diff'}
+          displayMode={displayMode}
         />
       </main>
 
@@ -147,27 +147,84 @@ const MainPage: React.FC = () => {
           display: 'flex',
           justifyContent: 'flex-start',
           paddingLeft: 'calc(25% - 4rem)',
-          gap: '1rem',
+          gap: '1.5rem',
+          alignItems: 'flex-end',
         }}
       >
-        <DrawModeButton
-          currentMode={drawMode}
-          onModeChange={handleDrawModeChange}
-          disabled={isCalculating}
-        />
-        <FeatureModeButton
-          currentMode={featureMode}
-          onModeChange={handleFeatureModeChange}
-          disabled={isCalculating}
-        />
-        <DiffModeButton
-          currentMode={diffMode}
-          onModeChange={handleDiffModeChange}
-          disabled={isCalculating}
-        />
+        <ControlGroup label="描画モード">
+          <DrawModeButton
+            currentMode={drawMode}
+            onModeChange={handleDrawModeChange}
+            disabled={isCalculating}
+          />
+        </ControlGroup>
+
+        <GroupDivider />
+
+        <ControlGroup label="計算特徴量">
+          <FeatureModeButton
+            currentMode={featureMode}
+            onModeChange={handleFeatureModeChange}
+            disabled={isCalculating}
+          />
+        </ControlGroup>
+
+        <GroupDivider />
+
+        <ControlGroup label="特徴グラフの表示モード">
+          <DiffModeButton
+            currentMode={displayMode}
+            onModeChange={handleDisplayModeChange}
+            disabled={isCalculating}
+          />
+        </ControlGroup>
       </footer>
     </div>
   )
 }
+
+// Why: フッター各メニューの役割を明示するためのラベル付きラッパー。
+// 視覚的なグルーピングに加え、role="group" + aria-labelledby で
+// スクリーンリーダーがラベルとボタン群の関連を読み取れるようにする。
+const ControlGroup: React.FC<{
+  label: string
+  children: React.ReactNode
+}> = ({ label, children }) => {
+  const labelId = useId()
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      <span
+        id={labelId}
+        style={{
+          fontSize: '0.75rem',
+          color: '#666',
+          fontFamily: '"Noto Sans JP", Arial, sans-serif',
+          paddingLeft: '0.25rem',
+        }}
+      >
+        {label}
+      </span>
+      <div
+        role="group"
+        aria-labelledby={labelId}
+        style={{ display: 'flex', alignItems: 'center' }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const GroupDivider: React.FC = () => (
+  <div
+    aria-hidden="true"
+    style={{
+      width: '1px',
+      alignSelf: 'stretch',
+      backgroundColor: '#ddd',
+      margin: '0.25rem 0',
+    }}
+  />
+)
 
 export default MainPage
