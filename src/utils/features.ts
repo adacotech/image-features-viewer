@@ -42,6 +42,45 @@ export const getFeatureOrder = (
   return 2
 }
 
+export interface OrderStat {
+  mean: number
+  std: number
+}
+
+// Why: 統計比較モード用に、次数ごとの平均 μ と標準偏差 σ を A・B 合算で算出する純関数。
+// Graph コンポーネント本体から計算ロジックを分離し、ユニットテストを書きやすくする。
+// σ そのもの（+1 補正なし）を返し、補正は呼び出し側の責務にする。
+export const computeOrderStats = (
+  mode: FeatureMode,
+  seriesA: number[],
+  seriesB: number[],
+): Record<FeatureOrder, OrderStat> => {
+  const ranges = FEATURE_ORDER_RANGES[mode]
+  const result: Record<FeatureOrder, OrderStat> = {
+    0: { mean: 0, std: 0 },
+    1: { mean: 0, std: 0 },
+    2: { mean: 0, std: 0 },
+  }
+  for (const order of [0, 1, 2] as FeatureOrder[]) {
+    const [start, end] = ranges[order]
+    const count = end - start
+    if (count <= 0) continue
+    let sum = 0
+    for (let i = start; i < end; i += 1) {
+      sum += (seriesA[i] ?? 0) + (seriesB[i] ?? 0)
+    }
+    const mean = sum / (count * 2)
+    let sqSum = 0
+    for (let i = start; i < end; i += 1) {
+      const dA = (seriesA[i] ?? 0) - mean
+      const dB = (seriesB[i] ?? 0) - mean
+      sqSum += dA * dA + dB * dB
+    }
+    result[order] = { mean, std: Math.sqrt(sqSum / (count * 2)) }
+  }
+  return result
+}
+
 let wasmInitialized = false
 
 async function initWasm() {

@@ -4,11 +4,14 @@ import BarChartIcon from '@mui/icons-material/BarChart'
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows'
 import QueryStatsIcon from '@mui/icons-material/QueryStats'
 
-export type DiffMode = 'compare' | 'diff' | 'stats'
+export type DisplayMode = 'compare' | 'diff' | 'stats'
+// Why: 旧名 `DiffMode` の互換 alias。compare/diff/stats の3値を扱うため、
+// 新規参照は `DisplayMode` を使う。既存の参照箇所は順次置き換える。
+export type DiffMode = DisplayMode
 
 interface DiffModeButtonProps {
-  currentMode: DiffMode
-  onModeChange: (mode: DiffMode) => void
+  currentMode: DisplayMode
+  onModeChange: (mode: DisplayMode) => void
   disabled?: boolean
 }
 
@@ -18,7 +21,7 @@ const DiffModeButton: React.FC<DiffModeButtonProps> = ({
   disabled = false,
 }) => {
   // Why: マウスクリック時のフォーカスリングは抑制し、キーボード操作時のみ表示してa11yを担保
-  const getButtonStyle = (mode: DiffMode) => ({
+  const getButtonStyle = (mode: DisplayMode) => ({
     color: currentMode === mode ? '#fff' : '#333333',
     backgroundColor: currentMode === mode ? '#2196F3' : 'transparent',
     '&:hover': {

@@ -2,13 +2,11 @@ import React from 'react'
 import Plot from 'react-plotly.js'
 import {
   FEATURE_DIMS,
-  FEATURE_ORDER_RANGES,
+  computeOrderStats,
   getFeatureOrder,
   type FeatureMode,
-  type FeatureOrder,
 } from '../../utils/features'
-
-export type GraphDisplayMode = 'compare' | 'diff' | 'stats'
+import type { DisplayMode } from '../ControlPanel/DiffModeButton'
 
 interface GraphComponentProps {
   featuresA?: number[]
@@ -16,7 +14,7 @@ interface GraphComponentProps {
   isLoading?: boolean
   mode?: FeatureMode
   // Why: 比較(compare) / 差分(diff, A-B) / 統計比較(stats, 次数別 (x−μ)/(σ+1)) を切替
-  displayMode?: GraphDisplayMode
+  displayMode?: DisplayMode
 }
 
 // Why: A/B を見分ける固定カラー（凡例・色弁別性を考慮して青/橙）
@@ -45,40 +43,10 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
   // 差分系列（A - B）
   const seriesDiff = seriesA.map((value, index) => value - seriesB[index])
 
-  // 統計比較：次数ごとに A・B を合算した平均 μ と標準偏差 σ を求め、(x − μ) / (σ + 1) に標準化する
-  // Why: A/B 共通基準で μ を取ることで両者の偏りが直接比較でき、σ で割ることで
-  //      0次〜2次でスケールが大きく異なる HLAC 値を同じ尺度に揃えて並べられる。
-  //      σ + 1 にしているのは、σ=0（次数内が一様）の場合の0除算回避と、
-  //      σ が極端に小さい場合の発散を抑えるため。
-  const orderStats: Record<FeatureOrder, { mean: number; std: number }> =
-    (() => {
-      const ranges = FEATURE_ORDER_RANGES[mode]
-      const result = {
-        0: { mean: 0, std: 0 },
-        1: { mean: 0, std: 0 },
-        2: { mean: 0, std: 0 },
-      } as Record<FeatureOrder, { mean: number; std: number }>
-      ;([0, 1, 2] as FeatureOrder[]).forEach((order) => {
-        const [start, end] = ranges[order]
-        const count = end - start
-        if (count <= 0) return
-        let sum = 0
-        for (let i = start; i < end; i += 1) {
-          sum += seriesA[i] + seriesB[i]
-        }
-        const mean = sum / (count * 2)
-        let sqSum = 0
-        for (let i = start; i < end; i += 1) {
-          const dA = seriesA[i] - mean
-          const dB = seriesB[i] - mean
-          sqSum += dA * dA + dB * dB
-        }
-        const std = Math.sqrt(sqSum / (count * 2))
-        result[order] = { mean, std }
-      })
-      return result
-    })()
-
+  // 統計比較：次数ごとに A・B を合算した μ と σ を求め、(x − μ) / (σ + 1) に標準化する
+  // Why: σ + 1 にしているのは、σ=0（次数内が一様）の場合の0除算回避と、
+  //      σ が極端に小さい場合の発散を抑えるため（純粋な z-score より堅牢）。
+  const orderStats = computeOrderStats(mode, seriesA, seriesB)
   const standardize = (value: number, index: number) => {
     const { mean, std } = orderStats[getFeatureOrder(mode, index)]
     return (value - mean) / (std + 1)
