@@ -1,25 +1,31 @@
 import React from 'react'
 import Plot from 'react-plotly.js'
+import { FEATURE_DIMS, type FeatureMode } from '../../utils/features'
 
 interface GraphComponentProps {
   features?: number[]
   isLoading?: boolean
+  mode?: FeatureMode
 }
 
 const GraphComponent: React.FC<GraphComponentProps> = ({
   features = [],
   isLoading = false,
+  mode = 'binary',
 }) => {
-  // ダミーデータ
-  const defaultFeatures = new Array(25).fill(0)
-  const displayFeatures = features.length > 0 ? features : defaultFeatures
+  const dims = FEATURE_DIMS[mode]
+  const defaultFeatures = new Array(dims).fill(0)
+  // 特徴量の長さがモードと不一致でも表示が崩れないよう dims に合わせて整える
+  const sourceFeatures = features.length === dims ? features : defaultFeatures
+  const displayFeatures = sourceFeatures
 
-  // Y軸の範囲
-  const maxFeatureValue = Math.max(...displayFeatures)
-  const yAxisRange = maxFeatureValue > 100 ? undefined : [0, 100]
+  // Y軸の範囲（濃淡は f² / f³ により値が大きくなりやすいので非負レンジを動的に）
+  const maxFeatureValue = Math.max(...displayFeatures, 0)
+  const yAxisRange =
+    mode === 'binary' && maxFeatureValue <= 100 ? [0, 100] : undefined
   const xLabels = displayFeatures.map((_, index) => `${index + 1}`)
 
-  // HLACマスク画像アノテーション
+  // HLACマスク画像アノテーション（モードごとに枚数が変わる）
   const imageAnnotations = displayFeatures.map((_, index) => ({
     source: `${import.meta.env.BASE_URL}bin/hlac_mask/${index}.png`,
     xref: 'x' as const,
@@ -54,7 +60,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
 
   const layout = {
     title: {
-      text: 'HLAC特徴量 (25次元)',
+      text: `HLAC特徴量 (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`,
       font: {
         size: 18,
         color: '#333',
@@ -70,7 +76,7 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
         standoff: 60,
       },
       dtick: 1,
-      range: [0.5, 25.5],
+      range: [0.5, dims + 0.5],
     },
     yaxis: {
       title: {

@@ -5,23 +5,23 @@ import type { CanvasRef, DrawMode } from '../../components/Canvas'
 import GraphComponent from '../../components/Graph'
 import ClearButton from '../../components/ControlPanel/ClearButton'
 import DrawModeButton from '../../components/ControlPanel/DrawModeButton'
-import { extractFeatures } from '../../utils/features'
+import FeatureModeButton from '../../components/ControlPanel/FeatureModeButton'
+import { extractFeatures, type FeatureMode } from '../../utils/features'
 
 const MainPage: React.FC = () => {
   const canvasRef = useRef<CanvasRef>(null)
   const [features, setFeatures] = useState<number[]>([])
   const [isCalculating, setIsCalculating] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>('line')
+  const [featureMode, setFeatureMode] = useState<FeatureMode>('binary')
+  // 直近のImageDataを保持しておくことで、特徴量モード切替時に再計算できる
+  const lastImageDataRef = useRef<ImageData | null>(null)
 
-  const handleImageDataChange = async (imageData: ImageData) => {
-    console.log('ImageData updated:', imageData.width, 'x', imageData.height)
-
+  const computeFeatures = async (imageData: ImageData, mode: FeatureMode) => {
     setIsCalculating(true)
-
     try {
-      // WASM特徴量抽出（非同期）
-      const extractedFeatures = await extractFeatures(imageData)
-      setFeatures(extractedFeatures)
+      const extracted = await extractFeatures(imageData, mode)
+      setFeatures(extracted)
     } catch (error) {
       console.error('特徴量抽出エラー:', error)
       setFeatures([])
@@ -30,13 +30,30 @@ const MainPage: React.FC = () => {
     }
   }
 
+  const handleImageDataChange = async (imageData: ImageData) => {
+    console.log('ImageData updated:', imageData.width, 'x', imageData.height)
+    lastImageDataRef.current = imageData
+    await computeFeatures(imageData, featureMode)
+  }
+
   const handleClearCanvas = () => {
     canvasRef.current?.clearCanvas()
+    // クリア後にモード切替が走っても古い ImageData を使い回さないよう ref も破棄する
+    lastImageDataRef.current = null
     setFeatures([])
   }
 
   const handleModeChange = (mode: DrawMode) => {
     setDrawMode(mode)
+  }
+
+  const handleFeatureModeChange = async (mode: FeatureMode) => {
+    setFeatureMode(mode)
+    if (lastImageDataRef.current) {
+      await computeFeatures(lastImageDataRef.current, mode)
+    } else {
+      setFeatures([])
+    }
   }
 
   return (
@@ -56,7 +73,11 @@ const MainPage: React.FC = () => {
           drawMode={drawMode}
         />
 
-        <GraphComponent features={features} isLoading={isCalculating} />
+        <GraphComponent
+          features={features}
+          isLoading={isCalculating}
+          mode={featureMode}
+        />
       </main>
 
       <footer
@@ -76,6 +97,11 @@ const MainPage: React.FC = () => {
           disabled={isCalculating}
         />
         <ClearButton onClear={handleClearCanvas} />
+        <FeatureModeButton
+          currentMode={featureMode}
+          onModeChange={handleFeatureModeChange}
+          disabled={isCalculating}
+        />
       </footer>
     </div>
   )
