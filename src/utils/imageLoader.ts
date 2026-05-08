@@ -6,6 +6,10 @@ export const SUPPORTED_IMAGE_MIME_TYPES = [
   'image/png',
   'image/jpeg',
   'image/webp',
+  // Why: BMP は OS 標準の保存形式として頻出。ブラウザ標準の <img> でデコード可能。
+  //      ブラウザによって `image/bmp` と `image/x-ms-bmp` のどちらが付くかが異なるため両方許可する。
+  'image/bmp',
+  'image/x-ms-bmp',
 ] as const
 
 export const SUPPORTED_IMAGE_ACCEPT = SUPPORTED_IMAGE_MIME_TYPES.join(',')
@@ -33,7 +37,8 @@ export const isSupportedImageFile = (file: File): boolean => {
     lower.endsWith('.png') ||
     lower.endsWith('.jpg') ||
     lower.endsWith('.jpeg') ||
-    lower.endsWith('.webp')
+    lower.endsWith('.webp') ||
+    lower.endsWith('.bmp')
   )
 }
 
