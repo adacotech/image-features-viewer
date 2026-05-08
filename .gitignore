@@ -25,3 +25,7 @@ dist-ssr
 
 # Documentation (internal)
 SystemDesign.md
+
+# Agent session artifacts (作業メモ・ドラフトなど。リポジトリには含めない)
+.docs/
+.claude/
