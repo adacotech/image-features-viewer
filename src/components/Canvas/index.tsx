@@ -7,6 +7,13 @@ import React, {
 } from 'react'
 import { IconButton, Tooltip } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
+import {
+  drawImageToCanvasAsGrayscale,
+  loadImageFromFile,
+  SUPPORTED_IMAGE_ACCEPT,
+  isSupportedImageFile,
+} from '../../utils/imageLoader'
 
 export type DrawMode = 'freehand' | 'line'
 
@@ -18,6 +25,9 @@ interface CanvasComponentProps {
   // Why: クリア操作をキャンバスごとに置くために、外部からハンドラを受け取る。
   onClear?: () => void
 }
+
+// Why: 読み込み失敗等の通知を一定時間で消すための猶予。長すぎても邪魔になるため 4 秒。
+const ERROR_MESSAGE_DURATION_MS = 4000
 
 export interface CanvasRef {
   clearCanvas: () => void
@@ -32,6 +42,8 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const tempCanvasRef = useRef<HTMLCanvasElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const errorTimerRef = useRef<number | null>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [lastPosition, setLastPosition] = useState<{
       x: number
@@ -42,6 +54,88 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       y: number
     } | null>(null)
     const [isShiftPressed, setIsShiftPressed] = useState(false)
+    const [isDragOver, setIsDragOver] = useState(false)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+    const showErrorMessage = (message: string) => {
+      setErrorMessage(message)
+      if (errorTimerRef.current !== null) {
+        window.clearTimeout(errorTimerRef.current)
+      }
+      errorTimerRef.current = window.setTimeout(() => {
+        setErrorMessage(null)
+        errorTimerRef.current = null
+      }, ERROR_MESSAGE_DURATION_MS)
+    }
+
+    const drawImageToCanvas = async (file: File) => {
+      const result = await loadImageFromFile(file)
+      if (!result.ok) {
+        showErrorMessage(result.message)
+        return
+      }
+      const canvas = canvasRef.current
+      const ctx = canvas?.getContext('2d')
+      if (!canvas || !ctx) return
+
+      drawImageToCanvasAsGrayscale(
+        ctx,
+        result.image,
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT,
+      )
+
+      // Why: 描画中の一時 Canvas に直線プレビューが残っている場合に備えてクリアする。
+      const tempCanvas = tempCanvasRef.current
+      const tempCtx = tempCanvas?.getContext('2d')
+      if (tempCanvas && tempCtx) {
+        tempCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+      }
+
+      if (onImageDataChange) {
+        const imageData = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+        onImageDataChange(imageData)
+      }
+    }
+
+    const handleFileInputChange = async (
+      e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+      const file = e.target.files?.[0]
+      // Why: 同じファイルを連続で選んだ際にも change イベントが発火するよう値をリセットする。
+      e.target.value = ''
+      if (!file) return
+      await drawImageToCanvas(file)
+    }
+
+    const openFilePicker = () => {
+      fileInputRef.current?.click()
+    }
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+      // Why: dragover で preventDefault しないと drop イベントが発火しない。
+      e.preventDefault()
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy'
+      }
+      if (!isDragOver) setIsDragOver(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+      // Why: 子要素間移動でも dragleave が走るので、コンテナ外に出た時だけ解除する。
+      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+      setIsDragOver(false)
+    }
+
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      setIsDragOver(false)
+      const files = e.dataTransfer?.files
+      if (!files || files.length === 0) return
+      // Why: 複数ドロップは先頭の対応形式ファイルのみを処理する。仕様の単純化を優先。
+      const file = Array.from(files).find(isSupportedImageFile) ?? files[0]
+      await drawImageToCanvas(file)
+    }
 
     const clearCanvas = () => {
       const canvas = canvasRef.current
@@ -111,6 +205,10 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       return () => {
         window.removeEventListener('keydown', handleKeyDown)
         window.removeEventListener('keyup', handleKeyUp)
+        if (errorTimerRef.current !== null) {
+          window.clearTimeout(errorTimerRef.current)
+          errorTimerRef.current = null
+        }
       }
     }, [])
 
@@ -249,6 +347,10 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     return (
       <div
         ref={containerRef}
+        onDragEnter={handleDragOver}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         style={{
           flex: 1,
           display: 'flex',
@@ -259,8 +361,18 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           justifyContent: 'center',
           padding: '20px',
           boxSizing: 'border-box',
+          // Why: ドラッグ中であることを枠で明示する。
+          outline: isDragOver ? '2px dashed #2196F3' : 'none',
+          outlineOffset: '-8px',
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={SUPPORTED_IMAGE_ACCEPT}
+          onChange={handleFileInputChange}
+          style={{ display: 'none' }}
+        />
         <div style={{ position: 'relative' }}>
           <canvas
             ref={canvasRef}
@@ -289,60 +401,110 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               pointerEvents: 'none',
             }}
           />
-          {(label || onClear) && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 4,
-                left: 4,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                zIndex: 2,
-                pointerEvents: 'none',
-              }}
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              left: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              zIndex: 2,
+              pointerEvents: 'none',
+            }}
+          >
+            {label && (
+              <span
+                style={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                  color: '#fff',
+                  padding: '2px 10px',
+                  borderRadius: 4,
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                  lineHeight: 1.4,
+                }}
+              >
+                {label}
+              </span>
+            )}
+            <Tooltip
+              title="画像を読み込む（ドラッグ&ドロップも可）"
+              placement="right"
             >
-              {label && (
-                <span
-                  style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    color: '#fff',
-                    padding: '2px 10px',
-                    borderRadius: 4,
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    lineHeight: 1.4,
+              <span style={{ pointerEvents: 'auto' }}>
+                <IconButton
+                  size="small"
+                  aria-label={`${label ?? ''} に画像を読み込む`}
+                  onClick={openFilePicker}
+                  sx={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    color: '#9ec5ff',
+                    padding: '4px',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                      color: '#ffffff',
+                    },
+                    '&:focus': {
+                      outline: 'none',
+                      boxShadow: 'none',
+                    },
                   }}
                 >
-                  {label}
+                  <AddPhotoAlternateIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            {onClear && (
+              <Tooltip title="このキャンバスをクリア" placement="right">
+                <span style={{ pointerEvents: 'auto' }}>
+                  <IconButton
+                    size="small"
+                    aria-label={`${label ?? ''} キャンバスをクリア`}
+                    onClick={onClear}
+                    sx={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      color: '#ff6b6b',
+                      padding: '4px',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: '#ff2323',
+                      },
+                      '&:focus': {
+                        outline: 'none',
+                        boxShadow: 'none',
+                      },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                 </span>
-              )}
-              {onClear && (
-                <Tooltip title="このキャンバスをクリア" placement="right">
-                  <span style={{ pointerEvents: 'auto' }}>
-                    <IconButton
-                      size="small"
-                      aria-label={`${label ?? ''} キャンバスをクリア`}
-                      onClick={onClear}
-                      sx={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        color: '#ff6b6b',
-                        padding: '4px',
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          color: '#ff2323',
-                        },
-                        '&:focus': {
-                          outline: 'none',
-                          boxShadow: 'none',
-                        },
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
+              </Tooltip>
+            )}
+          </div>
+          {errorMessage && (
+            <div
+              role="alert"
+              style={{
+                position: 'absolute',
+                left: '50%',
+                bottom: 8,
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(180, 0, 0, 0.85)',
+                color: '#fff',
+                padding: '4px 12px',
+                borderRadius: 4,
+                fontSize: 13,
+                lineHeight: 1.4,
+                maxWidth: '90%',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                pointerEvents: 'none',
+                zIndex: 3,
+              }}
+            >
+              {errorMessage}
             </div>
           )}
         </div>
