@@ -3,30 +3,57 @@ import Plot from 'react-plotly.js'
 import { FEATURE_DIMS, type FeatureMode } from '../../utils/features'
 
 interface GraphComponentProps {
-  features?: number[]
+  featuresA?: number[]
+  featuresB?: number[]
   isLoading?: boolean
   mode?: FeatureMode
+  // Why: 比較表示(false) と 差分表示(true, A-B) を切り替える
+  diffMode?: boolean
 }
 
+// Why: A/B を見分ける固定カラー（凡例・色弁別性を考慮して青/橙）
+const COLOR_A = '#2196F3'
+const COLOR_A_LINE = '#1976D2'
+const COLOR_B = '#FF9800'
+const COLOR_B_LINE = '#F57C00'
+// Why: 差分の正/負を直感的に判別できるよう色分け（正=A優勢=青, 負=B優勢=橙）
+const COLOR_DIFF_POS = '#2196F3'
+const COLOR_DIFF_NEG = '#FF9800'
+
 const GraphComponent: React.FC<GraphComponentProps> = ({
-  features = [],
+  featuresA = [],
+  featuresB = [],
   isLoading = false,
   mode = 'binary',
+  diffMode = false,
 }) => {
   const dims = FEATURE_DIMS[mode]
   const defaultFeatures = new Array(dims).fill(0)
-  // 特徴量の長さがモードと不一致でも表示が崩れないよう dims に合わせて整える
-  const sourceFeatures = features.length === dims ? features : defaultFeatures
-  const displayFeatures = sourceFeatures
+  // Why: 長さがモード次元と不一致なら 0 埋めにそろえ、表示崩れを防ぐ
+  const seriesA = featuresA.length === dims ? featuresA : defaultFeatures
+  const seriesB = featuresB.length === dims ? featuresB : defaultFeatures
+  const xLabels = defaultFeatures.map((_, index) => `${index + 1}`)
 
-  // Y軸の範囲（濃淡は f² / f³ により値が大きくなりやすいので非負レンジを動的に）
-  const maxFeatureValue = Math.max(...displayFeatures, 0)
-  const yAxisRange =
-    mode === 'binary' && maxFeatureValue <= 100 ? [0, 100] : undefined
-  const xLabels = displayFeatures.map((_, index) => `${index + 1}`)
+  // 差分系列（A - B）
+  const seriesDiff = seriesA.map((value, index) => value - seriesB[index])
 
-  // HLACマスク画像アノテーション（モードごとに枚数が変わる）
-  const imageAnnotations = displayFeatures.map((_, index) => ({
+  // Y軸範囲：差分時は対称に、比較時は従来同様 nonnegative
+  const yAxisRange: [number, number] | undefined = (() => {
+    if (diffMode) {
+      const absMax = Math.max(...seriesDiff.map((value) => Math.abs(value)), 0)
+      // Why: ゼロ周辺でも見やすいよう最低限の余白を確保
+      const range = absMax === 0 ? 1 : absMax * 1.1
+      return [-range, range]
+    }
+    const maxValue = Math.max(...seriesA, ...seriesB, 0)
+    if (mode === 'binary' && maxValue <= 100) {
+      return [0, 100]
+    }
+    return undefined
+  })()
+
+  // HLACマスク画像アノテーション（次元数ぶん）
+  const imageAnnotations = defaultFeatures.map((_, index) => ({
     source: `${import.meta.env.BASE_URL}bin/hlac_mask/${index}.png`,
     xref: 'x' as const,
     yref: 'paper' as const,
@@ -40,27 +67,60 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
     sizing: 'contain' as const,
   }))
 
-  const plotData = [
-    {
-      x: xLabels,
-      y: displayFeatures,
-      type: 'bar' as const,
-      marker: {
-        color: displayFeatures.map((value) =>
-          value > 0 ? '#2196F3' : '#E0E0E0',
-        ),
-        line: {
-          color: '#1976D2',
-          width: 1,
+  const plotData = diffMode
+    ? [
+        {
+          x: xLabels,
+          y: seriesDiff,
+          type: 'bar' as const,
+          marker: {
+            color: seriesDiff.map((value) =>
+              value === 0
+                ? '#E0E0E0'
+                : value > 0
+                  ? COLOR_DIFF_POS
+                  : COLOR_DIFF_NEG,
+            ),
+            line: {
+              color: seriesDiff.map((value) =>
+                value >= 0 ? COLOR_A_LINE : COLOR_B_LINE,
+              ),
+              width: 1,
+            },
+          },
+          name: 'A − B',
         },
-      },
-      name: '特徴量値',
-    },
-  ]
+      ]
+    : [
+        {
+          x: xLabels,
+          y: seriesA,
+          type: 'bar' as const,
+          marker: {
+            color: seriesA.map((value) => (value > 0 ? COLOR_A : '#E0E0E0')),
+            line: { color: COLOR_A_LINE, width: 1 },
+          },
+          name: 'A',
+        },
+        {
+          x: xLabels,
+          y: seriesB,
+          type: 'bar' as const,
+          marker: {
+            color: seriesB.map((value) => (value > 0 ? COLOR_B : '#E0E0E0')),
+            line: { color: COLOR_B_LINE, width: 1 },
+          },
+          name: 'B',
+        },
+      ]
+
+  const titleText = diffMode
+    ? `HLAC特徴量 差分 A − B (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`
+    : `HLAC特徴量 A / B 比較 (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`
 
   const layout = {
     title: {
-      text: `HLAC特徴量 (${dims}次元・${mode === 'binary' ? '2値' : '濃淡'})`,
+      text: titleText,
       font: {
         size: 18,
         color: '#333',
@@ -87,7 +147,9 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
         },
       },
       range: yAxisRange,
-      rangemode: 'nonnegative' as const,
+      // Why: 差分表示時のみ負値を許可、比較表示は従来通り非負レンジ
+      ...(diffMode ? {} : { rangemode: 'nonnegative' as const }),
+      ...(diffMode ? { zeroline: true, zerolinecolor: '#999' } : {}),
     },
     images: imageAnnotations,
     plot_bgcolor: '#FAFAFA',
@@ -98,7 +160,15 @@ const GraphComponent: React.FC<GraphComponentProps> = ({
       t: 60,
       b: 180,
     },
-    showlegend: false,
+    barmode: 'group' as const,
+    showlegend: !diffMode,
+    legend: {
+      orientation: 'h' as const,
+      x: 1,
+      xanchor: 'right' as const,
+      y: 1.05,
+      yanchor: 'bottom' as const,
+    },
     font: {
       family: '"Noto Sans JP", Arial, sans-serif',
     },

@@ -5,12 +5,18 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react'
+import { IconButton, Tooltip } from '@mui/material'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 export type DrawMode = 'freehand' | 'line'
 
 interface CanvasComponentProps {
   onImageDataChange?: (imageData: ImageData) => void
   drawMode?: DrawMode
+  // Why: A/B 2枚を見分けるための表示用ラベル。1枚運用との互換のため任意。
+  label?: string
+  // Why: クリア操作をキャンバスごとに置くために、外部からハンドラを受け取る。
+  onClear?: () => void
 }
 
 export interface CanvasRef {
@@ -22,7 +28,7 @@ const CANVAS_WIDTH = 640
 const CANVAS_HEIGHT = 480
 
 const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
-  ({ onImageDataChange, drawMode = 'freehand' }, ref) => {
+  ({ onImageDataChange, drawMode = 'freehand', label, onClear }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const tempCanvasRef = useRef<HTMLCanvasElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -283,6 +289,62 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               pointerEvents: 'none',
             }}
           />
+          {(label || onClear) && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 4,
+                left: 4,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                zIndex: 2,
+                pointerEvents: 'none',
+              }}
+            >
+              {label && (
+                <span
+                  style={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    color: '#fff',
+                    padding: '2px 10px',
+                    borderRadius: 4,
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {label}
+                </span>
+              )}
+              {onClear && (
+                <Tooltip title="このキャンバスをクリア" placement="right">
+                  <span style={{ pointerEvents: 'auto' }}>
+                    <IconButton
+                      size="small"
+                      aria-label={`${label ?? ''} キャンバスをクリア`}
+                      onClick={onClear}
+                      sx={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: '#ff6b6b',
+                        padding: '4px',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          color: '#ff2323',
+                        },
+                        '&:focus': {
+                          outline: 'none',
+                          boxShadow: 'none',
+                        },
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+            </div>
+          )}
         </div>
       </div>
     )
