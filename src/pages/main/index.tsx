@@ -3,58 +3,97 @@ import HeaderComponent from '../../components/Header'
 import CanvasComponent from '../../components/Canvas'
 import type { CanvasRef, DrawMode } from '../../components/Canvas'
 import GraphComponent from '../../components/Graph'
-import ClearButton from '../../components/ControlPanel/ClearButton'
 import DrawModeButton from '../../components/ControlPanel/DrawModeButton'
 import FeatureModeButton from '../../components/ControlPanel/FeatureModeButton'
+import DiffModeButton from '../../components/ControlPanel/DiffModeButton'
+import type { DiffMode } from '../../components/ControlPanel/DiffModeButton'
 import { extractFeatures, type FeatureMode } from '../../utils/features'
 
+type CanvasTarget = 'A' | 'B'
+
 const MainPage: React.FC = () => {
-  const canvasRef = useRef<CanvasRef>(null)
-  const [features, setFeatures] = useState<number[]>([])
-  const [isCalculating, setIsCalculating] = useState(false)
+  const canvasRefA = useRef<CanvasRef>(null)
+  const canvasRefB = useRef<CanvasRef>(null)
+  const [featuresA, setFeaturesA] = useState<number[]>([])
+  const [featuresB, setFeaturesB] = useState<number[]>([])
+  const [isCalculatingA, setIsCalculatingA] = useState(false)
+  const [isCalculatingB, setIsCalculatingB] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>('line')
   const [featureMode, setFeatureMode] = useState<FeatureMode>('binary')
-  // 直近のImageDataを保持しておくことで、特徴量モード切替時に再計算できる
-  const lastImageDataRef = useRef<ImageData | null>(null)
+  const [diffMode, setDiffMode] = useState<DiffMode>('compare')
+  // Why: 直近のImageDataをA/B別々に保持し、特徴量モード切替時に再計算する
+  const lastImageDataRefA = useRef<ImageData | null>(null)
+  const lastImageDataRefB = useRef<ImageData | null>(null)
 
-  const computeFeatures = async (imageData: ImageData, mode: FeatureMode) => {
-    setIsCalculating(true)
+  const setFeaturesFor = (target: CanvasTarget, value: number[]) => {
+    if (target === 'A') setFeaturesA(value)
+    else setFeaturesB(value)
+  }
+
+  const setIsCalculatingFor = (target: CanvasTarget, value: boolean) => {
+    if (target === 'A') setIsCalculatingA(value)
+    else setIsCalculatingB(value)
+  }
+
+  const computeFeatures = async (
+    imageData: ImageData,
+    mode: FeatureMode,
+    target: CanvasTarget,
+  ) => {
+    setIsCalculatingFor(target, true)
     try {
       const extracted = await extractFeatures(imageData, mode)
-      setFeatures(extracted)
+      setFeaturesFor(target, extracted)
     } catch (error) {
-      console.error('特徴量抽出エラー:', error)
-      setFeatures([])
+      console.error(`特徴量抽出エラー (${target}):`, error)
+      setFeaturesFor(target, [])
     } finally {
-      setIsCalculating(false)
+      setIsCalculatingFor(target, false)
     }
   }
 
-  const handleImageDataChange = async (imageData: ImageData) => {
-    console.log('ImageData updated:', imageData.width, 'x', imageData.height)
-    lastImageDataRef.current = imageData
-    await computeFeatures(imageData, featureMode)
-  }
+  const makeImageDataChangeHandler =
+    (target: CanvasTarget) => async (imageData: ImageData) => {
+      const ref = target === 'A' ? lastImageDataRefA : lastImageDataRefB
+      ref.current = imageData
+      await computeFeatures(imageData, featureMode, target)
+    }
 
-  const handleClearCanvas = () => {
+  const makeClearHandler = (target: CanvasTarget) => () => {
+    const canvasRef = target === 'A' ? canvasRefA : canvasRefB
+    const dataRef = target === 'A' ? lastImageDataRefA : lastImageDataRefB
     canvasRef.current?.clearCanvas()
-    // クリア後にモード切替が走っても古い ImageData を使い回さないよう ref も破棄する
-    lastImageDataRef.current = null
-    setFeatures([])
+    // Why: クリア後にモード切替が走っても古い ImageData を使い回さないよう ref を破棄
+    dataRef.current = null
+    setFeaturesFor(target, [])
   }
 
-  const handleModeChange = (mode: DrawMode) => {
+  const handleDrawModeChange = (mode: DrawMode) => {
     setDrawMode(mode)
   }
 
   const handleFeatureModeChange = async (mode: FeatureMode) => {
     setFeatureMode(mode)
-    if (lastImageDataRef.current) {
-      await computeFeatures(lastImageDataRef.current, mode)
+    // Why: A/B それぞれの最後のImageDataで再計算（並列）
+    const tasks: Promise<void>[] = []
+    if (lastImageDataRefA.current) {
+      tasks.push(computeFeatures(lastImageDataRefA.current, mode, 'A'))
     } else {
-      setFeatures([])
+      setFeaturesA([])
     }
+    if (lastImageDataRefB.current) {
+      tasks.push(computeFeatures(lastImageDataRefB.current, mode, 'B'))
+    } else {
+      setFeaturesB([])
+    }
+    await Promise.all(tasks)
   }
+
+  const handleDiffModeChange = (mode: DiffMode) => {
+    setDiffMode(mode)
+  }
+
+  const isCalculating = isCalculatingA || isCalculatingB
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -67,16 +106,36 @@ const MainPage: React.FC = () => {
           minHeight: 0,
         }}
       >
-        <CanvasComponent
-          ref={canvasRef}
-          onImageDataChange={handleImageDataChange}
-          drawMode={drawMode}
-        />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }}
+        >
+          <CanvasComponent
+            ref={canvasRefA}
+            onImageDataChange={makeImageDataChangeHandler('A')}
+            drawMode={drawMode}
+            label="A"
+            onClear={makeClearHandler('A')}
+          />
+          <CanvasComponent
+            ref={canvasRefB}
+            onImageDataChange={makeImageDataChangeHandler('B')}
+            drawMode={drawMode}
+            label="B"
+            onClear={makeClearHandler('B')}
+          />
+        </div>
 
         <GraphComponent
-          features={features}
+          featuresA={featuresA}
+          featuresB={featuresB}
           isLoading={isCalculating}
           mode={featureMode}
+          diffMode={diffMode === 'diff'}
         />
       </main>
 
@@ -93,13 +152,17 @@ const MainPage: React.FC = () => {
       >
         <DrawModeButton
           currentMode={drawMode}
-          onModeChange={handleModeChange}
+          onModeChange={handleDrawModeChange}
           disabled={isCalculating}
         />
-        <ClearButton onClear={handleClearCanvas} />
         <FeatureModeButton
           currentMode={featureMode}
           onModeChange={handleFeatureModeChange}
+          disabled={isCalculating}
+        />
+        <DiffModeButton
+          currentMode={diffMode}
+          onModeChange={handleDiffModeChange}
           disabled={isCalculating}
         />
       </footer>
